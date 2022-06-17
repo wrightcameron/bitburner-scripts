@@ -16,6 +16,7 @@ export async function main(ns) {
     // have. If the target's security level is higher than this,
     // we'll weaken it before doing anything else
     const securityThresh = ns.getServerMinSecurityLevel(target) + 5;
+    // TODO Some servers take a very long time to get below 5 so this needs to be smarter
 
     // If we have the BruteSSH.exe program, use it to open the SSH Port
     // on the target server
