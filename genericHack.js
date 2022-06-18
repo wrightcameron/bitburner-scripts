@@ -18,16 +18,6 @@ export async function main(ns) {
     const securityThresh = ns.getServerMinSecurityLevel(target) + 5;
     // TODO Some servers take a very long time to get below 5 so this needs to be smarter
 
-    // If we have the BruteSSH.exe program, use it to open the SSH Port
-    // on the target server
-    if (ns.fileExists("BruteSSH.exe", "home")) {
-        ns.brutessh(target);
-    }
-
-    // Get root access to target server
-    // TODO Check if there is a method to check if the server has already been nuked
-    ns.nuke(target);
-
     // Infinite loop that continously hacks/grows/weakens the target server
     while (true) {
         if (ns.getServerSecurityLevel(target) > securityThresh) {
