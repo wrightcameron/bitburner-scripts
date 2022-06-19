@@ -5,14 +5,25 @@ export async function main(ns) {
 
     ns.disableLog("ALL");
     
-    let serverList = await getAllKnownServers(ns);
-    serverList = serverList.filter(e => e !== 'home');
+    ns.tprint("findBestRate.js [target] [-s]");
+    let target = (ns.args.length >= 1) ? ns.args[0] : null;
+    let showDetails = (ns.args.length >= 2) ? true : false;
+    
+    //If target variable is passed in, only run script on that one system.
+    let serverList;
+    if(target) {
+        serverList = [target]
+    } else {
+        serverList = await getAllKnownServers(ns);
+        serverList = serverList.filter(e => e !== 'home');
+    }
 
     let largestProfit = 0;
     let serverWithLargestProfit = serverList[0];
     for (let i = 0; i < serverList.length; i++) {
         let server = serverList[i];
 
+        // These steps will tell us which server has the best rate, which we care about from an instructor level.
         //Get money from hack
         let serverMoney = ns.getServerMoneyAvailable(server);
         let hackAnalyze = ns.hackAnalyze(server);
@@ -39,24 +50,4 @@ export async function main(ns) {
         ns.tprint("Server Money: " + serverMoney.toFixed(2) + ", money gained from hack: " + totalMoneyFromHack.toFixed(2) + ", After "+ hackTime.toFixed(2) + " (min)")
     };
     ns.tprint(serverWithLargestProfit + ": Best Expected Rate " + largestProfit.toFixed(2).toLocaleString("en-US") + " ($/min)")
-}
-
-// Get the percantage of money in server account relative to it's max
-export async function serverAccountPercent(ns, server) {
-    const serverMoney = ns.getServerMoneyAvailable(server);
-    const serverMaxMoney = ns.getServerMaxMoney(server);
-    return serverMoney * 100 / serverMaxMoney;
-}
-
-// Get total amount of time in milliseconds till server would be weakened to mine
-export async function weakenTimeToMin(ns, server, threads, cores) {
-    //TODO Allow way for user to select lesser floor, like 25% from min
-    let securityLevel = ns.getServerSecurityLevel(server);
-    let securityMin = ns.getServerMinSecurityLevel(server);
-    let securityDelta = securityLevel - securityMin;  // Find delta
-
-    let weakenAnalyze = ns.weakenAnalyze(threads, cores);
-    let weakenNums = securityDelta / weakenAnalyze; // Times weaken goes into delta
-    let weakenTime = ns.getWeakenTime(server);
-    return weakenNums * weakenTime;
 }

@@ -4,6 +4,7 @@ export async function main(ns) {
     const threads = 1;
     const cores = 1;
 
+    // TODO Change this scan to be all servers, not just these
     const serverList = ns.scan();
     if (serverList.length == 0) {
         return
