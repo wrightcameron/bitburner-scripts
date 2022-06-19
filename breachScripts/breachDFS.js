@@ -41,6 +41,18 @@ export async function main(ns) {
                 ns.ftpcrack(server);
             }
 
+            if (ns.fileExists("SQLInject.exe", "home")) {
+                ns.sqlinject(server);
+            }
+
+            if (ns.fileExists("HTTPWorm.exe", "home")) {
+                ns.httpworm(server);
+            }
+
+            if (ns.fileExists("relaySMTP.exe", "home")) {
+                ns.relaysmtp(server);
+            }
+
             try {
                 ns.nuke(server);  
               } catch (error) {

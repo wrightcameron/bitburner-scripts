@@ -4,15 +4,17 @@ export async function main(ns) {
     let target;
     let server = ns.getHostname();
     if(ns.args.length < 1) {
-        ns.print("simpleSurvey.js [tagetSystem]")
+        ns.print("simpleSurvey.js [tagetSystem] [minMoneyPercent]")
         target = server;
     }else {
         target = ns.args[0]
     }
 
+    let minMoneyPercent = (ns.args.length >= 2) ? ns.args[1] : 0.75;
+    
     // Defines how much money a server should have before we hack it
     // In this case, it is set to 75% of the server's max money
-    const moneyThresh = ns.getServerMaxMoney(target) * 0.75;
+    const moneyThresh = ns.getServerMaxMoney(target) * minMoneyPercent;
 
     // Defines the maximum security level the target server can
     // have. If the target's security level is higher than this,
