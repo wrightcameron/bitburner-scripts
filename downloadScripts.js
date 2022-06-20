@@ -42,9 +42,9 @@ const filesToDownload = [
     await ns.sleep(50)
     ns.tprint(`Files downloaded.`)
   
-    await ns.sleep(50)
-    ns.tprint(`Starting startup/run.js`)
-    ns.spawn('/startup/run.js', 1)
+    // await ns.sleep(50)
+    // ns.tprint(`Starting startup/run.js`)
+    // ns.spawn('/startup/run.js', 1)
   }
   
   export async function download(ns, filename, branch) {
