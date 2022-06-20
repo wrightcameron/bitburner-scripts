@@ -22,6 +22,8 @@ export async function main(ns) {
     let serverList = await getServers('home');
     let stack = new Stack();
     let seenServers = ['home']
+    
+    ns.tprint(`Servers found starting from home" ${serverList}`)
 
     for (let i = 0; i < serverList.length; i++) {
         stack.push(serverList[i]);

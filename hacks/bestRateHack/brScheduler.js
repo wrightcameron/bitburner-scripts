@@ -1,7 +1,10 @@
+import { Logger } from "/lib/Logger.js"
 import { getAllKnownServers } from "/lib/findAllServersDFS.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
+    
+    let logger = new Logger(ns, true, true);
     
     ns.tprint("brScheduler.js [killPrograms] [RamSlack] [ratePercent]")
 
@@ -11,7 +14,7 @@ export async function main(ns) {
     // let ratePercent = (ns.args.length >= 3) ? ns.args[2] : 0.50;
 
     //Get List of all Servers
-    let serverList = await getAllKnownServers(ns);
+    let serverList = await getAllKnownServers(ns, logger);
     serverList = serverList.filter(e => e !== 'home'); //Remove home
 
     //Get List of servers' we want to target.

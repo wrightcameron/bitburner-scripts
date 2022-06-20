@@ -7,7 +7,7 @@ import { Logger } from "/lib/Logger.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
-    // simpleInstructor.js <targetSystem> [destination] [ignoreHome] [minMoneyPercent] [freeRam] [killExisting]
+    // simpleInstructor.js <targetSystem> [destination] [ignoreHome] [minMoneyPercent] [freeRam] [killExisting] [buySystems]
     //ns.disableLog("ALL");
 
     //Command Line Arguments
@@ -37,15 +37,17 @@ export async function main(ns) {
 
     //If destination provided, only push script to that system
     if (dest) {
-        let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns))
+        let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns, logger))
         logger.info(`Setting up script at one location, ${dest}`)
         await startDeployment(ns, logger, dest, scriptInfo, metaData, killExisting, target, serversOfInterest);
         printResults(ns, logger, 1, metaData);
     } else {
         logger.info(`Setting up script on all servers.`)
         // Get All Known Servers, push to those
-        let serverList = await getAllKnownServers(ns);
+        let serverList = await getAllKnownServers(ns, logger);
         let serversOfInterest = getServersWithBestRates(ns, serverList)
+        logger.debug(`List of servers found: ${serverList}`)
+        logger.debug(`List of servers of interest ${serversOfInterest}`)
         for(let server of serverList) {
             await startDeployment(ns, logger, server, scriptInfo, metaData, killExisting, target, serversOfInterest);
         }
@@ -157,7 +159,7 @@ export function makeRoom(ns, server) {
     //     checks++;
     // }
     // while (checks <= MAX_CHECKS);
-    return True
+    return true
 }
 
 export function printResults(ns, logger, serverCount, metaData) {
