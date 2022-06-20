@@ -1,6 +1,6 @@
 const filesToDownload = [
     '/breach/breach.js',
-    '/breack/breachDFS.js',
+    '/breach/breachDFS.js',
     '/hacks/bestRateHack/brDeploy.js',
     '/hacks/bestRateHack/brHack.js',
     '/hacks/bestRateHack/brScheduler.js',
