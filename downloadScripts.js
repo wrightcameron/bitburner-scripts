@@ -49,7 +49,7 @@ const filesToDownload = [
   
   export async function download(ns, filename, branch) {
     const fileUrl = filename.includes("/") ? filename : "/" + filename;
-    const path = baseUrl + branch + '/src' + fileUrl
+    const path = baseUrl + branch + fileUrl
     ns.tprint(`Trying to download ${path}`)
     await ns.wget(path + '?ts=' + new Date().getTime(), filename)
   }
