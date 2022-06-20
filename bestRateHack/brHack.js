@@ -1,17 +1,19 @@
 /** @param {NS} ns */
 export async function main(ns) {
 
-    ns.tprint("brHack.js [targetSystem] [ratePercent]")
+    ns.print("brHack.js [targetSystem] [ratePercent]")
 
     let target = (ns.args.length >= 1) ? ns.args[0] : ns.getHostname();
 
     let rateRange = 0.50; // If weaken or grow add 75% onto the rate, do them.  If they don't just hack
-
+    ns.print("Target: " + target + ", RateRange: " + rateRange)
     const startingRate = getRate(ns, target);
     ns.print(`${target} starting rate: ${startingRate} ($/min)`);
     let currentRate = startingRate;
     let weakenRate, growRate, hackRate;
     let weakenDiff, growDiff, hackDiff;
+    let hackCount = 0;
+    let growCount = 0;
 
     //First time running script, need to build the protfolio
     hackRate = await handleHack(ns, target);
@@ -20,30 +22,36 @@ export async function main(ns) {
     currentRate = hackRate //Move the current rate to the last rate, make it accurate
 
     growRate = await handleGrow(ns, target);
-    growDiff = currentRate - growRate;
+    growDiff = Math.abs(currentRate - growRate);
 
     currentRate = growRate;
 
     weakenRate = await handleWeaken(ns, target);
-    weakenDiff = currentRate - weakenRate;
+    weakenDiff = Math.abs(currentRate - weakenRate);
 
     currentRate = weakenRate;
 
     let upperBound = hackDiff * rateRange + hackDiff;
 
     while (true) {
-
-        if (growDiff > upperBound) {
+        ns.print("hackDiff: " + hackDiff)
+        ns.print("growDiff: " + growDiff + ", weakenDiff: "+ weakenDiff + ", upperBound: " + upperBound)
+        if (growDiff > upperBound || hackCount >= 10) {
+            hackCount = 0;
+            growCount++;
             ns.print(`Hack Diff was ${hackDiff}, upperbound of ${upperBound}.  The growDiff was greater: ${growDiff}`)
             growRate = await handleGrow(ns, target);
-            growDiff = currentRate - growRate;
+            growDiff = Math.abs(currentRate - growRate);
             currentRate = growRate;
-        } else if (weakenDiff > upperBound) {
+        } else if (weakenDiff > upperBound || growCount >= 10) {
+            growCount = 0;
             ns.print(`Hack Diff was ${hackDiff}, upperbound of ${upperBound}.  The weakenDiff was greater: ${weakenDiff}`)
             weakenRate = await handleWeaken(ns, target);
-            weakenDiff = currentRate - weakenRate;
+            weakenDiff = Math.abs(currentRate - weakenRate);
             currentRate = weakenRate;
         } else {
+            growCount = 0;
+            hackCount++;
             ns.print(`Hack Diff was ${hackDiff}, upperbound of ${upperBound}.`)
             hackRate = await handleHack(ns, target);
             hackDiff = currentRate - hackRate;

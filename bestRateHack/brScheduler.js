@@ -78,10 +78,10 @@ export async function main(ns) {
             pidCount++;
         }
     }
-    if(!ignoreHome) {
-        serverList.push('home')
-        // TODO terminate this script and setup the deploy on this server, it will need to be pointed at a target
-    }
+    // if(!ignoreHome) {
+    //     serverList.push('home')
+    //     // TODO terminate this script and setup the deploy on this server, it will need to be pointed at a target
+    // }
     ns.tprint("Of the " + serverList.length + " servers found Succuessfully deployed to " + pidCount);
     ns.tprint("NOt ROOT on " + rootIssueCount + ", Not enough Memory found on " + ramIssueCount);
 }
