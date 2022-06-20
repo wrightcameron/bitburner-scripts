@@ -1,9 +1,12 @@
+import { Logger } from "/lib/Logger.js"
 import { getAllKnownServers } from "/lib/findAllServersDFS.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
     const threads = 1
     const cores = 1
+
+    let logger = new Logger(ns, true, true);
 
     ns.tprint("scout.js [target] [isLocal]");
     let target = (ns.args.length >= 1) ? ns.args[0] : null;
@@ -17,7 +20,7 @@ export async function main(ns) {
         if (isLocal) {
             serverList = ns.scan();
         } else {
-            serverList = await getAllKnownServers(ns);
+            serverList = await getAllKnownServers(ns, logger);
             serverList = serverList.filter(e => e !== 'home');
         }
     }

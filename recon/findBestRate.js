@@ -1,9 +1,11 @@
+import { Logger } from "/lib/Logger.js"
 import { getAllKnownServers } from "/lib/findAllServersDFS.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
 
     ns.disableLog("ALL");
+    let logger = new Logger(ns, true, true);
     
     ns.tprint("findBestRate.js [target] [-s]");
     let target = (ns.args.length >= 1) ? ns.args[0] : null;
@@ -14,7 +16,7 @@ export async function main(ns) {
     if(target) {
         serverList = [target]
     } else {
-        serverList = await getAllKnownServers(ns);
+        serverList = await getAllKnownServers(ns, logger);
         serverList = serverList.filter(e => e !== 'home');
     }
 

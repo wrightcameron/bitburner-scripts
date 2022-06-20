@@ -14,10 +14,10 @@ export async function main(ns) {
     const serverCost = ns.getPurchasedServerCost(RamAmount)
     const total = Math.floor(savings / serverCost);
 
-    logger.info("Allowed to buy " + ns.getPurchasedServerLimit() + " servers")
-    logger.info("These server's can have max " + ns.getPurchasedServerMaxRam() + " RAM")
-    logger.info("Buying a server with " + RamAmount + " GB, would cost $" + serverCost)
-    logger.info("Total savings $" + savings.toFixed(2))
+    logger.info(`Allowed to buy ${ns.getPurchasedServerLimit()} servers, currently own ${ns.getPurchasedServers().length}`)
+    logger.info(`These server's can have max ${ns.getPurchasedServerMaxRam()} RAM`)
+    logger.info(`Buying a server with ${RamAmount} GB, would cost $ ${serverCost}`)
+    logger.info(`Total savings $ ${savings.toFixed(2)}`)
 
     logger.info("Could buy " + total.toFixed(2))
 
