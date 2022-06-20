@@ -23,9 +23,9 @@ export async function main(ns) {
 
     //Information on hacking scripts, and args tp pass to the next one.
     let scriptInfo = {
-        entryPoint: '/simpleHack/simpleSurvey.js',
+        entryPoint: '/hacks/simpleHack/simpleSurvey.js',
         args: [target, minMoneyPercent],
-        files: ['/simpleHack/simpleHack.js', '/simpleHack/simpleSurvey.js']
+        files: ['/hacks/simpleHack/simpleHack.js', '/hacks/simpleHack/simpleSurvey.js']
     }
 
     //Data collection on server deployment pass/fail
