@@ -3,23 +3,26 @@ import { freeRam, getLargestRamUsage } from "/lib/MemoryProcs.js";
 import { totalSystemsCouldBuy, buyServers } from "/lib/PurchaseServers.js";
 import { getServersWithBestRates } from "/lib/algorithem.js";
 import { Logger } from "/lib/Logger.js"
+import { handleBuyServers } from "/lib/PurchaseServers.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
     // simpleInstructor.js <targetSystem> [destination] [ignoreHome] [minMoneyPercent] [freeRam] [killExisting] [buySystems]
     //ns.disableLog("ALL");
 
-    let logger = new Logger(ns, true, true);
-    
     //Command Line Arguments
     let args = ns.flags([
-                        ['dest', null],
-                        ['target', null],
-                        ['minMoneyPercent',  0.75],
-                        ['ignoreHome', false],
-                        ['killExisting',false],
-                        ['buySystems', false],
+        ['dest', null],
+        ['target', null],
+        ['minMoneyPercent', 0.75],
+        ['ignoreHome', false],
+        ['killExisting', false],
+        ['buySystems', false],
+        ['daemon', false]
     ])
+
+    // Create logger, and set output to logs if daemon, to terminal if not.
+    let logger = new Logger(ns, !args.daemon, false);
 
     //Information on hacking scripts, and args tp pass to the next one.
     let scriptInfo = {
@@ -30,46 +33,53 @@ export async function main(ns) {
 
     //Data collection on server deployment pass/fail
     let metaData = {
-        pidCount : 0,
+        pidCount: 0,
         RAMIssues: { 'count': 0, 'servers': [] },
         rootIssues: { 'count': 0, 'servers': [] }
     }
 
-    //If destination provided, only push script to that system
-    if (args.dest) {
-        let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns, logger))
-        logger.info(`Setting up script at one location, ${args.dest}`)
-        await startDeployment(ns, logger, args.dest, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
-        printResults(ns, logger, 1, metaData);
-    } else {
-        logger.info(`Setting up script on all servers.`)
-        // Get All Known Servers, push to those
-        let serverList = await getAllKnownServers(ns, logger);
-        let serversOfInterest = getServersWithBestRates(ns, serverList)
-        logger.debug(`List of servers found: ${serverList}`)
-        logger.debug(`List of servers of interest ${serversOfInterest}`)
-        for(let server of serverList) {
-            await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
-        }
-        
-        // Buy more Purchased Servers, if told
-        if(args.buySystems){
-            let numSystems = totalSystemsCouldBuy(ns, 64, ns.getServerMoneyAvailable('home'))
-            logger.info(`Purchasing ${numSystems} with 64 GB of RAM.`)
-            let boughtServers = buyServers(ns, numSystems, 64);
-            logger.info(`Bought these systems: ${boughtServers}`)
-        }
-        
-        logger.info(`Setting up script on all purchased servers.`)
-        // Get All Purchased Servers, deploy to those too
-        let purchasedServerList = ns.getPurchasedServers();
-        for(let server of purchasedServerList) {
-            await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
-        }
-        // Deploy to Home or maybe set this script into daemon mode to not quite.
+    logger.info(`Starting simple scheduler, as deamon ${args.daemon}`)
+    do {
+        // If destination provided, only push script to that system
+        if (args.dest) {
+            let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns, logger))
+            logger.info(`Setting up script at one location, ${args.dest}`)
+            await startDeployment(ns, logger, args.dest, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
+            printResults(ns, logger, 1, metaData);
+        } else {
+            logger.info(`Setting up script on all servers.`)
+            // Get All Known Servers, push to those
+            let serverList = await getAllKnownServers(ns, logger);
+            let serversOfInterest = getServersWithBestRates(ns, serverList)
+            logger.debug(`List of servers found: ${serverList}`)
+            logger.debug(`List of servers of interest ${serversOfInterest}`)
+            for (let server of serverList) {
+                await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
+            }
 
-        printResults(ns, logger, serverList.length + purchasedServerList.length, metaData);
-    }
+            // Buy more Purchased Servers, if told
+            if (args.buySystems) {
+                logger.info("Buying Servers")
+                handleBuyServers(ns, ns.getServerMoneyAvailable('home'))
+            }
+
+            logger.info(`Setting up script on all purchased servers.`)
+            // Get All Purchased Servers, deploy to those too
+            let purchasedServerList = ns.getPurchasedServers();
+            for (let server of purchasedServerList) {
+                await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
+            }
+            // Deploy to Home or maybe set this script into daemon mode to not quite.
+
+            printResults(ns, logger, serverList.length + purchasedServerList.length, metaData);
+        }
+        if(args.daemon){
+            //Put the process to sleep for a bit before running it again
+            let sleepTime = 1000 * 60 * 10;
+            logger.info(`Sleeping for ${sleepTime} min`)
+            await sleep(sleepTime)  //Lets have it sleep for 10 minutes
+        }
+    } while (args.daemon);
 }
 
 export async function startDeployment(ns, logger, server, scriptInfo, metaData, killExisting, target, serversOfInterest) {
@@ -82,8 +92,8 @@ export async function startDeployment(ns, logger, server, scriptInfo, metaData, 
             return
         }
 
-        if(killExisting){
-                ns.killall(server, true);
+        if (killExisting) {
+            ns.killall(server, true);
         }
 
         //Check RAM
@@ -100,16 +110,16 @@ export async function startDeployment(ns, logger, server, scriptInfo, metaData, 
         let threads = 1;
 
         //Change Target, if we want too
-        if(!target && serversOfInterest != null){
-            target = serversOfInterest[Math.floor(Math.random()*serversOfInterest.length)];
-            logger.info(`New target system is ${target}`)
+        if (!target && serversOfInterest != null) {
+            target = serversOfInterest[Math.floor(Math.random() * serversOfInterest.length)];
+            logger.debug(`New target system is ${target}`)
             scriptInfo.args = [target, scriptInfo.args[1]]
         }
 
         //Kick Off
-        logger.info("Kicking off run")
+        logger.debug("Kicking off run")
         await startScript(ns, logger, server, threads, scriptInfo, metaData);
-        logger.info("Finished setting up script.")
+        logger.debug("Finished setting up script.")
     } catch (error) {
         logger.info(`Exception thrown, error ${error}`)
     }
@@ -126,17 +136,17 @@ export function checkRAM(ns, server, files, metaData) {
 }
 
 export async function startScript(ns, logger, host, threads, scriptInfo, metaData) {
-    try{
+    try {
         const args = scriptInfo.args
         // If no target system is selected tell script to hack host
-        logger.info(`starting ${scriptInfo.entryPoint} on ${host} with args ${args }`);
+        logger.debug(`starting ${scriptInfo.entryPoint} on ${host} with args ${args}`);
         let pid = await ns.exec(scriptInfo.entryPoint, host, threads, ...args);
         if (!pid) {
             logger.info(`Error starting /simpleHack/simpleDeploy.js script. pid: ${pid}`);
         } else {
             metaData.pidCount++;
         }
-    }catch (error){
+    } catch (error) {
         logger.info(`Exception: Executing script, ${error}`)
     }
 }
@@ -163,7 +173,7 @@ export function makeRoom(ns, server) {
 }
 
 export function printResults(ns, logger, serverCount, metaData) {
-    try{
+    try {
         const rootIssueCount = metaData.rootIssues.count;
         const ramIssueCount = metaData.RAMIssues.count;
         const rootIssuesServers = metaData.rootIssues.servers;
@@ -174,7 +184,7 @@ export function printResults(ns, logger, serverCount, metaData) {
         logger.info(`Not root on ${rootIssueCount}, Not enough Memory found on ${ramIssueCount}`);
         logger.info(`Servers with root issues were: ${rootIssuesServers}`)
         logger.info(`Servers with memory issues were: ${ramIssuesServers}`)
-    } catch (error){
+    } catch (error) {
         logger.info(`Exception Thrown trying to print results: ${error}`)
     }
 }

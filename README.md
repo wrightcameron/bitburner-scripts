@@ -61,6 +61,8 @@ Python required, and the command above will need to be run from the root directo
 ```bash
 # Open as many ports as possbile to get root access
 alias breach=run breach/breachDFS.js
+# Download scripts from local repository (Need localhost http server running)
+alias lpull=run downloadScripts.js --local true
 ```
 
 ## Resources

@@ -43,15 +43,11 @@ export async function main(ns) {
     for (let filename of filesToDownload) {
         ns.scriptKill(filename, 'home')
         ns.rm(filename)
-        await ns.sleep(50)
+        //ns.tprint(`Killed and deleted old script ${filename}`)
         await download(ns, filename, baseUrl, args.local)
     }
-    await ns.sleep(50)
-    ns.tprint('Killed and deleted old scripts.')
-    await ns.sleep(50)
-    ns.tprint(`Files downloaded.`)
 
-    // await ns.sleep(50)
+    ns.tprint("Finished downloading scripts.")
     // ns.tprint(`Starting startup/run.js`)
     // ns.spawn('/startup/run.js', 1)
 }

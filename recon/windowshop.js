@@ -1,24 +1,31 @@
 import { Logger } from "/lib/Logger.js"
-import { cliArgDict, checkForArg } from "/lib/cliArgs";
+import { cliArgDict, checkForArg } from "/lib/cliArgs.js";
+import { totalSystemsCouldBuy, largestRamWithMostServers , getBestServersToReplace , handleBuyServers} from "/lib/PurchaseServers.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
-    // For getting infromation on purchasable computers
-    //logger.info("windowshop.js <desiredRAM>")
-    let argDict = cliArgDict(ns.args);
-    let RamAmount = checkForArg(argDict, 'ram', 16)
-
     let logger = new Logger(ns, true, true);
-    
-    const savings = ns.getServerMoneyAvailable('home')
-    const serverCost = ns.getPurchasedServerCost(RamAmount)
-    const total = Math.floor(savings / serverCost);
+    //logger.info("windowshop.js <desiredRAM>")
+    let args = ns.flags([
+        ['ram', null],
+        ['money', ns.getServerMoneyAvailable('home')],
+        ['buy', false]
+    ])
 
-    logger.info(`Allowed to buy ${ns.getPurchasedServerLimit()} servers, currently own ${ns.getPurchasedServers().length}`)
-    logger.info(`These server's can have max ${ns.getPurchasedServerMaxRam()} RAM`)
-    logger.info(`Buying a server with ${RamAmount} GB, would cost $ ${serverCost}`)
-    logger.info(`Total savings $ ${savings.toFixed(2)}`)
+    let ram;
+    if(args.ram){
+        ram = args.ram;
+    } else{
+        ram = largestRamWithMostServers(ns, args.money);
+    }
 
-    logger.info("Could buy " + total.toFixed(2))
+    logger.info(`Owned Servers ${ns.getPurchasedServers().length}/${ns.getPurchasedServerLimit()}`)
+    logger.info(`With ${ram} RAM, could buy ${totalSystemsCouldBuy(ns,ram, args.money)} servers`)
+    logger.info(`Would need to replace these servers: ${getBestServersToReplace(ns, args.money, ram)}`)
+    logger.info(`Total savings $ ${args.money.toFixed(2)}`)
 
+    if(args.buy){
+        ns.tprint("Buying Servers")
+        handleBuyServers(ns, args.money)
+    }
 }
