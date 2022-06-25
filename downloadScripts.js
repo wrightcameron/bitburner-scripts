@@ -11,45 +11,62 @@ const filesToDownload = [
     '/hacks/genericHack.js',
     '/lib/algorithem.js',
     '/lib/cliArgs.js',
-    '/libfindAllServersDFS.js',
+    '/lib/findAllServersDFS.js',
     '/lib/Logger.js',
     '/lib/MemoryProcs.js',
     '/lib/PurchaseServers.js',
     '/recon/findBestRate.js',
-    '/recon/harvestFiles.js',
+    '/recon/getCodeContracts.js',
     '/recon/scout.js',
     '/recon/windowshop.js',
     'purchaseServer.js',
-  ]
-  const baseUrl = 'https://raw.githubusercontent.com/wrightcameron/bitburner-scripts/'
-  
-  
-  /**
-   * @param {NS} ns
-   **/
-  export async function main(ns) {
+]
+
+
+/**
+ * @param {NS} ns
+ **/
+export async function main(ns) {
     ns.disableLog("sleep")
-    const args = ns.flags([['branch', 'main']])
-  
-    for ( let filename of filesToDownload ) {
-      ns.scriptKill(filename, 'home')
-      ns.rm(filename)
-      await ns.sleep(50)
-      await download(ns, filename, args.branch)
+    //Command Line args
+    const args = ns.flags([['branch', 'master'],
+    ['local', false]
+    ]);
+
+    let baseUrl;
+    if (!args.local) {
+        baseUrl = `https://raw.githubusercontent.com/wrightcameron/bitburner-scripts/${args.branch}`
+    } else {
+        baseUrl = 'http://localhost:8080'
+    }
+
+    for (let filename of filesToDownload) {
+        ns.scriptKill(filename, 'home')
+        ns.rm(filename)
+        await ns.sleep(50)
+        await download(ns, filename, baseUrl, args.local)
     }
     await ns.sleep(50)
     ns.tprint('Killed and deleted old scripts.')
     await ns.sleep(50)
     ns.tprint(`Files downloaded.`)
-  
+
     // await ns.sleep(50)
     // ns.tprint(`Starting startup/run.js`)
     // ns.spawn('/startup/run.js', 1)
-  }
-  
-  export async function download(ns, filename, branch) {
-    const fileUrl = filename.includes("/") ? filename : "/" + filename;
-    const path = baseUrl + branch + fileUrl
-    ns.tprint(`Trying to download ${path}`)
-    await ns.wget(path + '?ts=' + new Date().getTime(), filename)
-  }
+}
+
+export async function download(ns, filename, baseUrl, local) {
+    try{
+        const fileUrl = filename.includes("/") ? filename : "/" + filename;
+        const path = baseUrl + fileUrl
+        ns.tprint(`Trying to download ${path}`)
+        if (!local) {
+            await ns.wget(path + '?ts=' + new Date().getTime(), filename)
+        } else {
+            await ns.wget(path, filename)
+        }
+    }catch(error){
+        ns.tprint(`Exception: Error downloading ${filename} from url: ${baseUrl}. Error: ${error}`)
+    }
+}
