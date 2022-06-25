@@ -1,4 +1,3 @@
-import { cliArgDict, checkForArg } from "/lib/cliArgs";
 import { getAllKnownServers } from "/lib/findAllServersDFS.js";
 import { freeRam, getLargestRamUsage } from "/lib/MemoryProcs.js";
 import { totalSystemsCouldBuy, buyServers } from "/lib/PurchaseServers.js";
@@ -10,21 +9,22 @@ export async function main(ns) {
     // simpleInstructor.js <targetSystem> [destination] [ignoreHome] [minMoneyPercent] [freeRam] [killExisting] [buySystems]
     //ns.disableLog("ALL");
 
-    //Command Line Arguments
-    let argDict = cliArgDict(ns.args);
-    let dest = checkForArg(argDict, 'dest', null)
-    let target = checkForArg(argDict, 'target', null)
-    let minMoneyPercent = checkForArg(argDict, 'minMoneyPercent', 0.75)
-    let ignoreHome = checkForArg(argDict, 'ignoreHome', false)
-    let killExisting = checkForArg(argDict, 'killExisting', false)
-    let buySystems = checkForArg(argDict, 'buySystems', false)
-    
     let logger = new Logger(ns, true, true);
+    
+    //Command Line Arguments
+    let args = ns.flags([
+                        ['dest', null],
+                        ['target', null],
+                        ['minMoneyPercent',  0.75],
+                        ['ignoreHome', false],
+                        ['killExisting',false],
+                        ['buySystems', false],
+    ])
 
     //Information on hacking scripts, and args tp pass to the next one.
     let scriptInfo = {
         entryPoint: '/hacks/simpleHack/simpleSurvey.js',
-        args: [target, minMoneyPercent],
+        args: [args.target, args.minMoneyPercent],
         files: ['/hacks/simpleHack/simpleHack.js', '/hacks/simpleHack/simpleSurvey.js']
     }
 
@@ -36,10 +36,10 @@ export async function main(ns) {
     }
 
     //If destination provided, only push script to that system
-    if (dest) {
+    if (args.dest) {
         let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns, logger))
-        logger.info(`Setting up script at one location, ${dest}`)
-        await startDeployment(ns, logger, dest, scriptInfo, metaData, killExisting, target, serversOfInterest);
+        logger.info(`Setting up script at one location, ${args.dest}`)
+        await startDeployment(ns, logger, args.dest, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
         printResults(ns, logger, 1, metaData);
     } else {
         logger.info(`Setting up script on all servers.`)
@@ -49,11 +49,11 @@ export async function main(ns) {
         logger.debug(`List of servers found: ${serverList}`)
         logger.debug(`List of servers of interest ${serversOfInterest}`)
         for(let server of serverList) {
-            await startDeployment(ns, logger, server, scriptInfo, metaData, killExisting, target, serversOfInterest);
+            await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
         }
         
         // Buy more Purchased Servers, if told
-        if(buySystems){
+        if(args.buySystems){
             let numSystems = totalSystemsCouldBuy(ns, 64, ns.getServerMoneyAvailable('home'))
             logger.info(`Purchasing ${numSystems} with 64 GB of RAM.`)
             let boughtServers = buyServers(ns, numSystems, 64);
@@ -64,7 +64,7 @@ export async function main(ns) {
         // Get All Purchased Servers, deploy to those too
         let purchasedServerList = ns.getPurchasedServers();
         for(let server of purchasedServerList) {
-            await startDeployment(ns, logger, server, scriptInfo, metaData, killExisting, target, serversOfInterest);
+            await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
         }
         // Deploy to Home or maybe set this script into daemon mode to not quite.
 
