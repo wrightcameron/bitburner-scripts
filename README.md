@@ -24,17 +24,44 @@ export async function main(ns) {
         throw new Exception("Run the script from home");
     }
 
-    let args = ns.flags([['branch', 'master']])
+    let args = ns.flags([['branch', 'master'],
+                         ['local', false]
+    ]);
 
-    await ns.wget(
-        `https://raw.githubusercontent.com/wrightcameron/bitburner-scripts/${args.branch}/downloadScripts.js?ts=${new Date().getTime()}`,
-        "downloadScripts.js"
-    );
-    ns.spawn("downloadScripts.js", 1, '--branch', args.branch);
+    let url;
+    if (!args.local) {
+        ns.tprint(`Pulling download script from Github.`)
+        url = `https://raw.githubusercontent.com/wrightcameron/bitburner-scripts/${args.branch}/downloadScripts.js?ts=${new Date().getTime()}`
+    } else {
+        ns.tprint(`Pulling download script localhost.`)
+        url = `http://localhost:8080/downloadScripts.js`
+    }
+
+    await ns.wget(url, "downloadScripts.js");
+    let spawnArgs = ['--branch', args.branch, '--local', args.local];
+    ns.tprint("Spawning downloadScripts script.");
+    ns.spawn("downloadScripts.js", 1, ...spawnArgs);
 }
 ```
 
 Save and exit vim (:wq): `run start.js` then press enter.
+
+### Downloading Script changes from local repository.
+
+Pushing files constantly to Github can get messy, especially if you arn't rolling up your commits.  Or if you are using this script but don't want to pull from this repo.  In that case both `start.js` and `downloadScripts.js` have a flag `--local true` that will have the script download the raw source files from *localhost:8080*.  To have your files visiable start a Python HTTP server using the command.
+
+```bash
+python -m http.server --directory . 8080
+```
+
+Python required, and the command above will need to be run from the root directory of this repository.
+
+## Useful Alias
+
+```bash
+# Open as many ports as possbile to get root access
+alias breach=run breach/breachDFS.js
+```
 
 ## Resources
 
