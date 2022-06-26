@@ -5,6 +5,10 @@ import { getServersWithBestRates } from "/lib/algorithem.js";
 import { Logger } from "/lib/Logger.js"
 import { handleBuyServers } from "/lib/PurchaseServers.js"
 
+
+var logger;
+var metaData;
+
 /** @param {NS} ns */
 export async function main(ns) {
     // simpleInstructor.js <targetSystem> [destination] [ignoreHome] [minMoneyPercent] [freeRam] [killExisting] [buySystems]
@@ -19,20 +23,28 @@ export async function main(ns) {
         ['killExisting', false],
         ['buySystems', false],
         ['daemon', false]
-    ])
+    ]);
 
     // Create logger, and set output to logs if daemon, to terminal if not.
-    let logger = new Logger(ns, !args.daemon, false);
+    logger = new Logger(ns, !args.daemon, true);
 
     //Information on hacking scripts, and args tp pass to the next one.
     let scriptInfo = {
         entryPoint: '/hacks/simpleHack/simpleHack.js',
-        args: [args.target, args.minMoneyPercent],
-        files: ['/hacks/simpleHack/simpleHack.js', '/hacks/simpleHack/simpleSurvey.js']
-    }
+        args: {
+            target: args.target,
+            moneyThresh: null,
+            sercurityThresh: null,
+            delay: 0
+        },
+        files: ['/hacks/simpleHack/simpleHack.js'],
+        meta: {
+            minMoneyPercent: args.minMoneyPercent,
+        }
+    };
 
     //Data collection on server deployment pass/fail
-    let metaData = {
+    metaData = {
         pidCount: 0,
         RAMIssues: { 'count': 0, 'servers': [] },
         rootIssues: { 'count': 0, 'servers': [] }
@@ -44,8 +56,8 @@ export async function main(ns) {
         if (args.dest) {
             let serversOfInterest = getServersWithBestRates(ns, await getAllKnownServers(ns, logger))
             logger.info(`Setting up script at one location, ${args.dest}`)
-            await startDeployment(ns, logger, args.dest, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
-            printResults(ns, logger, 1, metaData);
+            await startDeployment(ns, args.dest, scriptInfo, args.killExisting, args.target, serversOfInterest);
+            printResults(1);
         } else {
             logger.info(`Setting up script on all servers.`)
             // Get All Known Servers, push to those
@@ -54,7 +66,7 @@ export async function main(ns) {
             logger.debug(`List of servers found: ${serverList}`)
             logger.debug(`List of servers of interest ${serversOfInterest}`)
             for (let server of serverList) {
-                await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
+                await startDeployment(ns, server, scriptInfo, args.killExisting, args.target, serversOfInterest);
             }
 
             // Buy more Purchased Servers, if told
@@ -67,11 +79,11 @@ export async function main(ns) {
             // Get All Purchased Servers, deploy to those too
             let purchasedServerList = ns.getPurchasedServers();
             for (let server of purchasedServerList) {
-                await startDeployment(ns, logger, server, scriptInfo, metaData, args.killExisting, args.target, serversOfInterest);
+                await startDeployment(ns, server, scriptInfo, args.killExisting, args.target, serversOfInterest);
             }
             // Deploy to Home or maybe set this script into daemon mode to not quite.
 
-            printResults(ns, logger, serverList.length + purchasedServerList.length, metaData);
+            printResults(serverList.length + purchasedServerList.length);
         }
         if (args.daemon) {
             //Put the process to sleep for a bit before running it again
@@ -82,7 +94,7 @@ export async function main(ns) {
     } while (args.daemon);
 }
 
-export async function startDeployment(ns, logger, server, scriptInfo, metaData, killExisting, target, serversOfInterest) {
+export async function startDeployment(ns, server, scriptInfo, killExisting, target, serversOfInterest) {
     try {
         //Check if it has root access,
         if (!ns.hasRootAccess(server)) {
@@ -92,47 +104,50 @@ export async function startDeployment(ns, logger, server, scriptInfo, metaData, 
             return
         }
 
-        //Deploy script to server, unless our destinartion is this server
-        logger.info(`Copying files ${scriptInfo.files}, over to ${server}`);
-        await ns.scp(scriptInfo.files, server);
-
         if (killExisting) {
             ns.killall(server, true);
         }
 
         //Check RAM
-        let exitCode = checkRAM(ns, server, scriptInfo.files, metaData);
+        let exitCode = checkRAM(ns, server, scriptInfo.files);
         if (exitCode) {
             makeRoom(ns, server) //Does Nothing Right now
             return
         }
+        //Deploy script to server, unless our destinartion is this server
+        logger.info(`Copying files ${scriptInfo.files}, over to ${server}`);
+        await ns.scp(scriptInfo.files, server);
 
-        do {
-            //Change Target, if we want too
-            if (!target && serversOfInterest != null) {
-                target = serversOfInterest[Math.floor(Math.random() * serversOfInterest.length)];
-                logger.debug(`New target system is ${target}`)
-                scriptInfo.args = [target, scriptInfo.args[1]]
-            }
+        //Change Target, if we want too
+        if (!target && serversOfInterest != null) {
+            scriptInfo.args.target = serversOfInterest[Math.floor(Math.random() * serversOfInterest.length)];
+            logger.debug(`New target system is ${scriptInfo.args.target}`)
+        }
 
-            let threads = hackAnalyzeMaxThreads(ns, target);
-            var totalScriptRam = getScriptRam(ns, scriptInfo.entryPoint, target, calcThreads);
-            if (totalScriptRam > freeRam(ns, server)) {
-                break
-            }
-            //Kick Off
-            logger.debug("Kicking off run")
-            await startScript(ns, logger, server, threads, scriptInfo, metaData);
-            logger.debug("Finished setting up script.")
-
-        } while (freeRam(ns, server) > totalScriptRam);
-
+        // calculateThreads()
+        let threads = hackAnalyzeMaxThreads(ns, scriptInfo.args.target);
+        logger.debug(`Calculated script max threads for ${scriptInfo.args.target} at ${threads} threads`)
+        if (!threads) {
+            logger.debug(`Threads was 0 so avaliable money was prob at 0, using 10 threads instead.`)
+            threads = 10;
+        }
+        // calculate the Max threads that the server would allow
+        let maxThreads =  freeRam(ns, server) /  ns.getScriptRam(scriptInfo.entryPoint, server);
+        logger.debug(`max Threads server would allow is ${maxThreads}`)
+        if (maxThreads < threads){
+            logger.debug(`threads is greater than what server would allow, using max threads`)
+            threads = maxThreads;
+        }
+        //Kick Off
+        logger.debug("Kicking off run")
+        await startScript(ns, server, threads, scriptInfo);
+        logger.debug("Finished setting up script.")
     } catch (error) {
         logger.info(`Exception thrown, error ${error}`)
     }
 }
 
-export function checkRAM(ns, server, files, metaData) {
+export function checkRAM(ns, server, files) {
     let exitCode = 0;
     if (freeRam(ns, server) < getLargestRamUsage(ns, server, files)) {
         metaData.RAMIssues.count++;
@@ -142,28 +157,41 @@ export function checkRAM(ns, server, files, metaData) {
     return exitCode;
 }
 
-export async function startScript(ns, logger, host, threads, scriptInfo, metaData) {
+export async function startScript(ns, host, threads, scriptInfo) {
     try {
         // Defines how much money a server should have before we hack it
         // In this case, it is set to 75% of the server's max money
-        const moneyThresh = ns.getServerMaxMoney(scriptInfo.args[0]) * scriptInfo.args[1];
+        scriptInfo.args.moneyThresh = ns.getServerMaxMoney(scriptInfo.args.target) * scriptInfo.meta.minMoneyPercent;
 
         // Defines the maximum security level the target server can
         // have. If the target's security level is higher than this,
         // we'll weaken it before doing anything else
-        const securityThresh = ns.getServerMinSecurityLevel(scriptInfo.args[0]) + 5;
+        scriptInfo.args.sercurityThresh = ns.getServerMinSecurityLevel(scriptInfo.args.target) + 5;
 
-        const args = scriptInfo.args
-        // If no target system is selected tell script to hack host
-        logger.debug(`starting ${scriptInfo.entryPoint} on ${host} with args ${args}`);
-        let pid = await ns.exec(scriptInfo.entryPoint, host, threads, ...args);
-        if (!pid) {
-            logger.info(`Error starting /simpleHack/simpleHack.js script. pid: ${pid}`);
+        let args = Object.values(scriptInfo.args);
+
+        //Check if the current hack is already running on the same server with the same parameters
+        if (ns.isRunning(scriptInfo.entryPoint, host, ...args)) {
+            scriptInfo.args.delay = Math.floor(Math.random() * 1000);
+            args = Object.values(scriptInfo.args);
         } else {
+            scriptInfo.args.delay = 0;
+            args = Object.values(scriptInfo.args);
+        }
+
+
+        logger.debug("Here are the args" + args)
+        // If no target system is selected tell script to hack host
+        logger.info(`starting ${scriptInfo.entryPoint} on ${host} with args ${args}, threads ${threads}`);
+        ns.enableLog("ALL");
+        let pid = await ns.exec(scriptInfo.entryPoint, host, threads, ...args);
+        if(pid !== 0){
             metaData.pidCount++;
         }
+        return pid;
     } catch (error) {
         logger.info(`Exception: Executing script, ${error}`)
+        throw new Error("Exception: Error executing new script")
     }
 }
 
@@ -188,7 +216,7 @@ export function makeRoom(ns, server) {
     return true
 }
 
-export function printResults(ns, logger, serverCount, metaData) {
+export function printResults(serverCount) {
     try {
         const rootIssueCount = metaData.rootIssues.count;
         const ramIssueCount = metaData.RAMIssues.count;
