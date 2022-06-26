@@ -1,5 +1,5 @@
 import { getAllKnownServers } from "/lib/findAllServersDFS.js";
-import { freeRam, getLargestRamUsage } from "/lib/MemoryProcs.js";
+import { freeRam, getLargestRamUsage, hackAnalyzeMaxThreads, getScriptRam } from "/lib/MemoryProcs.js";
 import { totalSystemsCouldBuy, buyServers } from "/lib/PurchaseServers.js";
 import { getServersWithBestRates } from "/lib/algorithem.js";
 import { Logger } from "/lib/Logger.js"
@@ -26,7 +26,7 @@ export async function main(ns) {
 
     //Information on hacking scripts, and args tp pass to the next one.
     let scriptInfo = {
-        entryPoint: '/hacks/simpleHack/simpleSurvey.js',
+        entryPoint: '/hacks/simpleHack/simpleHack.js',
         args: [args.target, args.minMoneyPercent],
         files: ['/hacks/simpleHack/simpleHack.js', '/hacks/simpleHack/simpleSurvey.js']
     }
@@ -73,7 +73,7 @@ export async function main(ns) {
 
             printResults(ns, logger, serverList.length + purchasedServerList.length, metaData);
         }
-        if(args.daemon){
+        if (args.daemon) {
             //Put the process to sleep for a bit before running it again
             let sleepTime = 1000 * 60 * 10;
             logger.info(`Sleeping for ${sleepTime} min`)
@@ -92,6 +92,10 @@ export async function startDeployment(ns, logger, server, scriptInfo, metaData, 
             return
         }
 
+        //Deploy script to server, unless our destinartion is this server
+        logger.info(`Copying files ${scriptInfo.files}, over to ${server}`);
+        await ns.scp(scriptInfo.files, server);
+
         if (killExisting) {
             ns.killall(server, true);
         }
@@ -102,24 +106,27 @@ export async function startDeployment(ns, logger, server, scriptInfo, metaData, 
             makeRoom(ns, server) //Does Nothing Right now
             return
         }
-        //Deploy script to server, unless our destinartion is this server
-        logger.info(`Copying files ${scriptInfo.files}, over to ${server}`);
-        await ns.scp(scriptInfo.files, server);
 
-        // calculateThreads()
-        let threads = 1;
+        do {
+            //Change Target, if we want too
+            if (!target && serversOfInterest != null) {
+                target = serversOfInterest[Math.floor(Math.random() * serversOfInterest.length)];
+                logger.debug(`New target system is ${target}`)
+                scriptInfo.args = [target, scriptInfo.args[1]]
+            }
 
-        //Change Target, if we want too
-        if (!target && serversOfInterest != null) {
-            target = serversOfInterest[Math.floor(Math.random() * serversOfInterest.length)];
-            logger.debug(`New target system is ${target}`)
-            scriptInfo.args = [target, scriptInfo.args[1]]
-        }
+            let threads = hackAnalyzeMaxThreads(ns, target);
+            var totalScriptRam = getScriptRam(ns, scriptInfo.entryPoint, target, calcThreads);
+            if (totalScriptRam > freeRam(ns, server)) {
+                break
+            }
+            //Kick Off
+            logger.debug("Kicking off run")
+            await startScript(ns, logger, server, threads, scriptInfo, metaData);
+            logger.debug("Finished setting up script.")
 
-        //Kick Off
-        logger.debug("Kicking off run")
-        await startScript(ns, logger, server, threads, scriptInfo, metaData);
-        logger.debug("Finished setting up script.")
+        } while (freeRam(ns, server) > totalScriptRam);
+
     } catch (error) {
         logger.info(`Exception thrown, error ${error}`)
     }
@@ -137,12 +144,21 @@ export function checkRAM(ns, server, files, metaData) {
 
 export async function startScript(ns, logger, host, threads, scriptInfo, metaData) {
     try {
+        // Defines how much money a server should have before we hack it
+        // In this case, it is set to 75% of the server's max money
+        const moneyThresh = ns.getServerMaxMoney(scriptInfo.args[0]) * scriptInfo.args[1];
+
+        // Defines the maximum security level the target server can
+        // have. If the target's security level is higher than this,
+        // we'll weaken it before doing anything else
+        const securityThresh = ns.getServerMinSecurityLevel(scriptInfo.args[0]) + 5;
+
         const args = scriptInfo.args
         // If no target system is selected tell script to hack host
         logger.debug(`starting ${scriptInfo.entryPoint} on ${host} with args ${args}`);
         let pid = await ns.exec(scriptInfo.entryPoint, host, threads, ...args);
         if (!pid) {
-            logger.info(`Error starting /simpleHack/simpleDeploy.js script. pid: ${pid}`);
+            logger.info(`Error starting /simpleHack/simpleHack.js script. pid: ${pid}`);
         } else {
             metaData.pidCount++;
         }
