@@ -8,7 +8,12 @@ This repoistory is storage for scripts used within video game [BitBurner](https:
 
 ## Requirements
 
-Download the game BitBurner on Steam
+Download the game BitBurner on Steam, or from your web browser.
+
+### Development (optional)
+
+* Python3 - For pushing files to game using local webserver
+* npm - Downloading required packages, for linting
 
 ## Installation
 
@@ -46,7 +51,7 @@ export async function main(ns) {
 
 Save and exit vim (:wq): `run start.js` then press enter.
 
-### Downloading Script changes from local repository.
+### Downloading Script changes from local repository
 
 Pushing files constantly to Github can get messy, especially if you arn't rolling up your commits.  Or if you are using this script but don't want to pull from this repo.  In that case both `start.js` and `downloadScripts.js` have a flag `--local true` that will have the script download the raw source files from *localhost:8080*.  To have your files visiable start a Python HTTP server using the command.
 
@@ -55,6 +60,25 @@ python -m http.server --directory . 8080
 ```
 
 Python required, and the command above will need to be run from the root directory of this repository.
+
+### Downloading Scripts with Bitburner VSCode Integration Extenision
+
+Bitburner on Steam contains an API Server that can intergrate with [VSCode Bitburner extension](https://marketplace.visualstudio.com/items?itemName=bitburner.bitburner-vscode-integration).
+
+## Testing
+
+Bitburner doesn't have a debugger to my knowledge.  So linting and testing have been setup and run outside of the game to reduce syntax or commong errors.
+
+### Linting
+
+Linting is done with ESLint.
+
+```bash
+# Run ESLint from root directory, printing out issues to command line.
+npx eslint . --config .eslintrc.json --ext .js
+# Run ESLint from root directory, printing out issues to command line, and fixing any issue it can resolve.
+npx eslint . --config .eslintrc.json --ext .js --fix
+```
 
 ## Useful Alias
 
@@ -69,3 +93,6 @@ alias lpull=run downloadScripts.js --local true
 
 * [Documentation](https://bitburner.readthedocs.io/en/latest/basicgameplay.html)
 * [List of functions](https://github.com/danielyxie/bitburner/blob/dev/markdown/bitburner.ns.md)
+
+* [ESLint Main Site](https://eslint.org/)
+* [Linting and Formatting with ESLint in VSCode](https://www.digitalocean.com/community/tutorials/linting-and-formatting-with-eslint-in-vs-code)
