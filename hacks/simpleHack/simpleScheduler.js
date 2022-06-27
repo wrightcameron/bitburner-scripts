@@ -89,7 +89,7 @@ export async function main(ns) {
             //Put the process to sleep for a bit before running it again
             let sleepTime = 1000 * 60 * 10;
             logger.info(`Sleeping for ${sleepTime} min`)
-            await sleep(sleepTime)  //Lets have it sleep for 10 minutes
+            await ns.sleep(sleepTime)  //Lets have it sleep for 10 minutes
         }
     } while (args.daemon);
 }
