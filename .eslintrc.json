@@ -11,5 +11,17 @@
         "sourceType": "module"
     },
     "rules": {
+        // Python and Javascript have ruined me. (YAML files should be 2 spaces though)
+        "indent": ["error", 4],
+        // Bitburner creates default file as "export async function main(ns)"
+        "import/prefer-default-export": "off", 
+        //Butburner forces the use of await on some functions, should revaluate later but for now assume better to disable.
+        "no-await-in-loop": "off",
+        // I find it cleaner
+        "no-plusplus": "off",
+        //Packages are handled in the game, I keep them absolute due to this being one repo.
+        "import/no-unresolved": "off",
+        //I'd like to use for loops for certain commands, but i'll keep the warnings to improve later.
+        "no-restricted-syntax": 1
     }
 }

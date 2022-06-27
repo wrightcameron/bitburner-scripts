@@ -1,11 +1,10 @@
 /** @param {NS} ns */
 export async function main(ns) {
-
-    if(ns.args.length < 1) {
-        ns.print("simpleHack.js <tagetSystem>")
-        return
+    if (ns.args.length < 1) {
+        ns.print('simpleHack.js <tagetSystem>');
+        return;
     }
-    
+
     const target = ns.args[0];
 
     // Defines how much money a server should have before we hack it

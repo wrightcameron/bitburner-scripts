@@ -65,6 +65,15 @@ Python required, and the command above will need to be run from the root directo
 
 Bitburner on Steam contains an API Server that can intergrate with [VSCode Bitburner extension](https://marketplace.visualstudio.com/items?itemName=bitburner.bitburner-vscode-integration).
 
+## Useful Alias
+
+```bash
+# Open as many ports as possbile to get root access
+alias breach=run breach/breachDFS.js
+# Download scripts from local repository (Need localhost http server running)
+alias lpull=run downloadScripts.js --local true
+```
+
 ## Testing
 
 Bitburner doesn't have a debugger to my knowledge.  So linting and testing have been setup and run outside of the game to reduce syntax or commong errors.
@@ -78,15 +87,6 @@ Linting is done with ESLint.
 npx eslint . --config .eslintrc.json --ext .js
 # Run ESLint from root directory, printing out issues to command line, and fixing any issue it can resolve.
 npx eslint . --config .eslintrc.json --ext .js --fix
-```
-
-## Useful Alias
-
-```bash
-# Open as many ports as possbile to get root access
-alias breach=run breach/breachDFS.js
-# Download scripts from local repository (Need localhost http server running)
-alias lpull=run downloadScripts.js --local true
 ```
 
 ## Resources
