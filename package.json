@@ -1,0 +1,28 @@
+{
+  "name": "bitburner-scripts",
+  "version": "1.0.0",
+  "description": "![BitBurner Logo](https://cdn.cloudflare.steamstatic.com/steam/apps/1812820/header.jpg?t=1639704813)",
+  "main": "downloadScripts.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wrightcameron/bitburner-scripts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wrightcameron/bitburner-scripts/issues"
+  },
+  "homepage": "https://github.com/wrightcameron/bitburner-scripts#readme",
+  "devDependencies": {
+    "eslint": "^8.18.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.26.0"
+  }
+}
