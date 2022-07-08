@@ -1,19 +1,20 @@
 /* eslint-disable no-restricted-syntax */
 import { Stock } from 'stocks/Stock';
+import { Capital } from 'stocks/Capital';
 import { Logger } from 'lib/Logger';
 
 export class Broker {
-    constructor(ns, reserve, risk) {
+    constructor(ns, capital, risk) {
         this.logger = new Logger(ns, false, false);
 
         this.ns = ns; // Netscript object
-        this.reserve = reserve; // Money that should stay liquid
-        this.risk = risk; // Risk tolerance
+        this.capital = new Capital(capital, false)
+
+        // this.risk = risk; // Risk tolerance
 
         this.numCycles = 2;
         this.COMMISSION = 100000;
-        this.fracL = 0.1; // Fraction of assets to keep as cash in hand
-        this.fracH = 0.2;
+
         this.corpus = 0;
         this.expRetLossToSell = -0.4; // As a percent, the amount of change between the initial
         // forecasted return and the current return of the stock. I.e.
@@ -22,6 +23,7 @@ export class Broker {
 
         this.stockArray = this.buildStockArray();
         this.portfolio = [];
+
     }
 
     buildStockArray() {
@@ -51,21 +53,12 @@ export class Broker {
     }
 
     checkPortfolio() {
+        let cashReturn = 0;
         for (const stock of this.portfolio) {
-            const pChange = this.pChange(stock.getSymbol(), stock.getInitExpRet(), stock.expRet());
-            if (pChange <= this.expRetLossToSell) {
-                const sellPrice = stock.sell(stock.shares());
-                this.logger.info(`Sold ${stock.getSymbol()} for ${stock.shares() * sellPrice}`);
-                this.corpus -= this.COMMISSION;
-            } else if (stock.expRet() <= 0) {
-                const sellPrice = stock.sell(stock.shares());
-                this.corpus -= this.COMMISSION;
-                this.logger.info(`Sold ${stock.getSymbol()} for ${stock.shares() * sellPrice}`);
-            } else {
-                this.logger.debug(`pChange ${pChange} greater than ${this.expRetLossToSell}`);
-                this.logger.debug(`Or ${stock.expRet()} is less than 0.`);
-            }
+            cashReturn += stock.checkOrders();
         }
+        this.logger.info(`Total cash gained from selling stocks ${cashReturn}`);
+        this.capital.addCash(cashReturn);
     }
 
     buyStocks() {
@@ -77,8 +70,7 @@ export class Broker {
                 const numShares = Math.floor((cashToSpend - this.COMMISSION) / stock.getAvgPrice());
                 const buyCalc = numShares * stock.expRet() * stock.getAvgPrice() * this.numCycles;
                 if (buyCalc > this.COMMISSION) {
-                    const boughtPrice = stock.buy(numShares);
-                    this.logger.info(`Bought ${stock.getSymbol()} for ${numShares * boughtPrice}`);
+                    stock.purchaseOrder(numShares)
                     this.portfolio.push(stock);
                 }
             } 
@@ -106,10 +98,22 @@ export class Broker {
             await this.ns.sleep(5 * 1000 * this.numCycles + 200);
         }
     }
+
+    liquidate() {
+        for (const stock of this.portfolio) {
+            stock.sellOrders();
+        }
+    }
 }
 
 /** @param {NS} ns */
 export async function main(ns) {
-    const broker = new Broker(ns, 1e6, 0.07);
+    // Command Line Arguments
+    const args = ns.flags([
+        ['capital',  1e6], //1e6 is 1 million, 1e9 is 1 billion
+        ['risk', 0.07],
+    ]);
+    
+    const broker = new Broker(ns, args.capital, args.risk);
     await broker.run();
 }
