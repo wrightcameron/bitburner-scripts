@@ -4,11 +4,11 @@ import { Capital } from 'stocks/Capital';
 import { Logger } from 'lib/Logger';
 
 export class Broker {
-    constructor(ns, capital, risk) {
+    constructor(ns, capital) {
         this.logger = new Logger(ns, false, false);
 
         this.ns = ns; // Netscript object
-        this.capital = new Capital(capital, false)
+        this.capital = new Capital(capital, false);
 
         // this.risk = risk; // Risk tolerance
 
@@ -23,7 +23,6 @@ export class Broker {
 
         this.stockArray = this.buildStockArray();
         this.portfolio = [];
-
     }
 
     buildStockArray() {
@@ -70,10 +69,10 @@ export class Broker {
                 const numShares = Math.floor((cashToSpend - this.COMMISSION) / stock.getAvgPrice());
                 const buyCalc = numShares * stock.expRet() * stock.getAvgPrice() * this.numCycles;
                 if (buyCalc > this.COMMISSION) {
-                    stock.purchaseOrder(numShares)
+                    stock.purchaseOrder(numShares);
                     this.portfolio.push(stock);
                 }
-            } 
+            }
             // else {
             //     this.logger.debug(`The stock ${stock.getSymbol()} has ${stock.shares()}`);
             //     this.logger.debug(`exp Rate is ${stock.expRet()}`);
@@ -110,10 +109,10 @@ export class Broker {
 export async function main(ns) {
     // Command Line Arguments
     const args = ns.flags([
-        ['capital',  1e6], //1e6 is 1 million, 1e9 is 1 billion
+        ['capital', 1e6], // 1e6 is 1 million, 1e9 is 1 billion
         ['risk', 0.07],
     ]);
-    
+
     const broker = new Broker(ns, args.capital, args.risk);
     await broker.run();
 }
